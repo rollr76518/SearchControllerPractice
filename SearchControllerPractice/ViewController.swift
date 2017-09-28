@@ -94,9 +94,49 @@ extension ViewController : MKMapViewDelegate {
         pinView?.pinTintColor = UIColor.orange
         pinView?.canShowCallout = true
         pinView?.isDraggable = true
+		pinView?.leftCalloutAccessoryView = UIButton.init(type: .detailDisclosure)//Should change to Navigation icon
         return pinView
     }
 
+	func mapView(_ mapView: MKMapView, annotationView view: MKAnnotationView, calloutAccessoryControlTapped control: UIControl) {
+		if let annotation = view.annotation {
+			showRoute(destination: annotation.coordinate)
+		}
+	}
+	
+	func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
+		let renderer = MKPolylineRenderer(overlay: overlay)
+		renderer.strokeColor = .orange
+		renderer.lineWidth = 4.0
+		return renderer
+	}
+	
+	func showRoute(destination coordinate:CLLocationCoordinate2D) {
+		let userMark = MKPlacemark.init(coordinate: mapView.userLocation.coordinate, addressDictionary: nil)
+		let destinationMark = MKPlacemark.init(coordinate: coordinate, addressDictionary: nil)
+		
+		let userItem = MKMapItem.init(placemark: userMark)
+		let destinationItem = MKMapItem.init(placemark: destinationMark)
+		
+		let request = MKDirectionsRequest.init()
+		request.source = userItem
+		request.destination = destinationItem
+		request.transportType = .automobile
+		
+		let directions = MKDirections.init(request: request)
+		directions.calculate { (response, error) in
+			if let response = response, let route = response.routes.first {
+				self.mapView.add(route.polyline, level: .aboveRoads)
+				
+				let rect = route.polyline.boundingMapRect
+				self.mapView.setRegion(MKCoordinateRegionForMapRect(rect), animated: true)
+			}
+			
+			if let error = error {
+				print(error)
+			}
+		}
+	}
 }
 
 extension ViewController: HandleMapSearch {
